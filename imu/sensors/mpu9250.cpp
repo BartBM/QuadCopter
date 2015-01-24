@@ -65,74 +65,6 @@ void MPU9250::calibrateSensors()
     calibrateAccel();
 }
 
-
-
-//const struct test_s test = {
-//    .gyro_sens      = 32768/250,
-//    .accel_sens     = 32768/2,  //FSR = +-2G = 16384 LSB/G
-//    .reg_rate_div   = 0,    /* 1kHz. */
-//    .reg_lpf        = 2,    /* 92Hz low pass filter*/
-//    .reg_gyro_fsr   = 0,    /* 250dps. */
-//    .reg_accel_fsr  = 0x0,  /* Accel FSR setting = 2g. */
-//    .wait_ms        = 200,   //200ms stabilization time
-//    .packet_thresh  = 200,    /* 200 samples */
-//    .min_dps        = 20.f,  //20 dps for Gyro Criteria C
-//    .max_dps        = 60.f, //Must exceed 60 dps threshold for Gyro Criteria B
-//    .max_gyro_var   = .5f, //Must exceed +50% variation for Gyro Criteria A
-//    .min_g          = .225f, //Accel must exceed Min 225 mg for Criteria B
-//    .max_g          = .675f, //Accel cannot exceed Max 675 mg for Criteria B
-//    .max_accel_var  = .5f,  //Accel must be within 50% variation for Criteria A
-//    .max_g_offset   = .5f,   //500 mg for Accel Criteria C
-//    .sample_wait_ms = 10    //10ms sample time wait
-//};
-
-//const struct gyro_reg_s reg = {
-//    .who_am_i       = 0x75,
-//    .rate_div       = 0x19,
-//    .lpf            = 0x1A,
-//    .prod_id        = 0x0C,
-//    .user_ctrl      = 0x6A,
-//    .fifo_en        = 0x23,
-//    .gyro_cfg       = 0x1B,
-//    .accel_cfg      = 0x1C,
-//    .accel_cfg2     = 0x1D,
-//    .lp_accel_odr   = 0x1E,
-//    .motion_thr     = 0x1F,
-//    .motion_dur     = 0x20,
-//    .fifo_count_h   = 0x72,
-//    .fifo_r_w       = 0x74,
-//    .raw_gyro       = 0x43,
-//    .raw_accel      = 0x3B,
-//    .temp           = 0x41,
-//    .int_enable     = 0x38,
-//    .dmp_int_status = 0x39,
-//    .int_status     = 0x3A,
-//    .accel_intel    = 0x69,
-//    .pwr_mgmt_1     = 0x6B,
-//    .pwr_mgmt_2     = 0x6C,
-//    .int_pin_cfg    = 0x37,
-//    .mem_r_w        = 0x6F,
-//    .accel_offs     = 0x77,
-//    .i2c_mst        = 0x24,
-//    .bank_sel       = 0x6D,
-//    .mem_start_addr = 0x6E,
-//    .prgm_start_h   = 0x70
-//#ifdef AK89xx_SECONDARY
-//    ,.raw_compass   = 0x49,
-//    .s0_addr        = 0x25,
-//    .s0_reg         = 0x26,
-//    .s0_ctrl        = 0x27,
-//    .s1_addr        = 0x28,
-//    .s1_reg         = 0x29,
-//    .s1_ctrl        = 0x2A,
-//    .s4_ctrl        = 0x34,
-//    .s0_do          = 0x63,
-//    .s1_do          = 0x64,
-//    .i2c_delay_ctrl = 0x67
-//#endif
-//};
-
-
 void MPU9250::readBiases()
 {
     cout << "[MPU9250 readBiases]" << endl;
@@ -176,32 +108,22 @@ void MPU9250::readBiases()
     for (int i=0; i<packet_counter; i++) {
         vector<unsigned char> data = readValues<unsigned char>(FIFO_R_W, 6);
 
-//        vec3_accel_bias.setX((((short) data[0] << 8) | data[1]));
-//        vec3_accel_bias.setY((((short) data[2] << 8) | data[3]));
-//        vec3_accel_bias.setZ((((short) data[4] << 8) | data[5]));
-        //cout << vec3_accel_bias.toString() << endl;
+        vec3_accel_bias.setX((((short) data[0] << 8) | data[1]));
+        vec3_accel_bias.setY((((short) data[2] << 8) | data[3]));
+        vec3_accel_bias.setZ((((short) data[4] << 8) | data[5]));
 
-//        vec3_gyr_bias.setX(vec3_gyr_bias.getX() + (((short) data[6])  << 8 | data[7]));
-//        vec3_gyr_bias.setY(vec3_gyr_bias.getY() + (((short) data[8])  << 8 | data[9]));
-//        vec3_gyr_bias.setZ(vec3_gyr_bias.getZ() + (((short) data[10]) << 8 | data[11]));
-
-        vec3_gyr_bias.setX(vec3_gyr_bias.getX() + (((short) data[0]) << 8 | data[1]));
-        vec3_gyr_bias.setY(vec3_gyr_bias.getY() + (((short) data[2]) << 8 | data[3]));
-        vec3_gyr_bias.setZ(vec3_gyr_bias.getZ() + (((short) data[4]) << 8 | data[5]));
-        cout << "gyr bias: " << vec3_gyr_bias.toString() << endl;
+        vec3_gyr_bias.setX(vec3_gyr_bias.getX() + (((short) data[6])  << 8 | data[7]));
+        vec3_gyr_bias.setY(vec3_gyr_bias.getY() + (((short) data[8])  << 8 | data[9]));
+        vec3_gyr_bias.setZ(vec3_gyr_bias.getZ() + (((short) data[10]) << 8 | data[11]));
     }
 
-    //vec3_accel_bias.setX((long) ((((long long) vec3_accel_bias.getX()) << 16) / ACCEL_SENSITIVITY / packet_counter));
-    //vec3_accel_bias.setY((long) ((((long long) vec3_accel_bias.getY()) << 16) / ACCEL_SENSITIVITY / packet_counter));
-    //vec3_accel_bias.setZ((long) ((((long long) vec3_accel_bias.getZ()) << 16) / ACCEL_SENSITIVITY / packet_counter));
+    vec3_accel_bias.setX((long) ((((long long) vec3_accel_bias.getX()) << 16) / ACCEL_SENSITIVITY / packet_counter));
+    vec3_accel_bias.setY((long) ((((long long) vec3_accel_bias.getY()) << 16) / ACCEL_SENSITIVITY / packet_counter));
+    vec3_accel_bias.setZ((long) ((((long long) vec3_accel_bias.getZ()) << 16) / ACCEL_SENSITIVITY / packet_counter));
 
-    //vec3_gyr_bias.setX((long) vec3_gyr_bias.getX()  /*/ GYRO_SENSITIVITY */ / packet_counter);
-    //vec3_gyr_bias.setY((long) vec3_gyr_bias.getY()  /*/ GYRO_SENSITIVITY */ / packet_counter);
-    //vec3_gyr_bias.setZ((long) vec3_gyr_bias.getZ()  /*/ GYRO_SENSITIVITY */ / packet_counter);
     vec3_gyr_bias.setX((long) ((((long long) vec3_gyr_bias.getX()) << 16) / GYRO_SENSITIVITY / packet_counter));
     vec3_gyr_bias.setY((long) ((((long long) vec3_gyr_bias.getY()) << 16) / GYRO_SENSITIVITY / packet_counter));
     vec3_gyr_bias.setZ((long) ((((long long) vec3_gyr_bias.getZ()) << 16) / GYRO_SENSITIVITY / packet_counter));
-    //vec3_gyr_bias.setX(50);
 
     if (vec3_accel_bias.getZ() > 0L)
             vec3_accel_bias.setZ(vec3_accel_bias.getZ() - 65536L);
