@@ -9,6 +9,20 @@
 
 #define SELF_TEST_SAMPLES 20
 
+enum class GyroScale : unsigned char {
+    _250dps = 0b00,
+    _500dps = 0b01,
+    _1000dps = 0b10,
+    _2000dps = 0b11
+};
+
+enum class AccelScale : unsigned char {
+    _2g = 0b00,
+    _4g = 0b01,
+    _8g = 0b10,
+    _16g = 0b11
+};
+
 class MPU9250 : public I2CChip
 {
 public:
