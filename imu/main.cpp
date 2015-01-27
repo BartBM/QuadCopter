@@ -4,27 +4,22 @@
 #include "sensors/mpu9250.h"
 #include "math/vector3.h"
 #include <unistd.h>
+#include <bitset>
 
 using namespace std;
 
 void testCompass(AK8963& compass)
 {
     compass.setOutputBitSetting(OutputBitSetting::_16BIT);
-    compass.setOperationModeSetting(OperationMode::SINGLE_MEASUREMENT);
-    for (int i=0; i<200; i++) {
+    compass.setOperationModeSetting(OperationMode::CONT_MEASUREMENT1);
+    for (int i=0; i<10; i++) {
 
         RegStatus1 regStatus1;
         regStatus1 = compass.readStatus1();
 
-        int counter = 0;
-        cout << "counter: ";
         while (!regStatus1.isDataReady()) {
-            ++counter;
-            cout << dec << counter << " ";
-            //usleep(10);
             regStatus1 = compass.readStatus1();
         }
-        cout << endl;
 
         cout << compass.readRawMeasurementData().toString() << endl;
         if (compass.readStatus2().isMagneticSensorOverflow()) {
@@ -37,6 +32,7 @@ void testCompass(AK8963& compass)
 
 void testAccel(MPU9250 imu)
 {
+    imu.setAccelConfigScale(AccelScale::_8g);
     for (int i=0; i<20; i++) {
         Vector3<short> accelData = imu.readAccel();
         cout << accelData.toString() << endl;
@@ -46,11 +42,10 @@ void testAccel(MPU9250 imu)
 
 void testGyro(MPU9250 imu)
 {
-    cout << "testGyro" << endl;
     for (int i=0; i<20; i++) {
         Vector3<int> gyroData = imu.readGyro();
         cout << gyroData.toString() << endl;
-        usleep(1000);
+        usleep(5000);
     }
 }
 
@@ -60,27 +55,28 @@ int main(int argc, char *argv[])
     BusPirate busPirate;
     busPirate.init();
 
-    //Variometer variometer;
-    //variometer.init(&busPirate);
-
     MPU9250 imu;
     imu.init(&busPirate);
     imu.whoAmi();
     imu.configure();
+    imu.configureCompass();
 
-    //testGyro(imu);
+//    testGyro(imu);
+//    imu.calibrateSensors();
+//    imu.selfTest();
+//    testGyro(imu);
 
-    //imu.calibrateSensors();
-    //imu.configure();
+    imu.setSamplerateDivider(20);
+    imu.enableFifo(true, true, true);
+    imu.setI2CBypass(true);
+    imu.readCompass();
+    imu.readFifoStream();
+    imu.readCompass();
 
-    imu.selfTest();
-
-    //testGyro(imu);
-    //testAccel(imu);
-
-    //imu.configureCompass();
-    //AK8963 compass = imu.getCompass();
-    //testCompass(compass);
+//    imu.configureCompass();
+//    AK8963 compass = imu.getCompass();
+//    compass.selfTest();
+//    testCompass(compass);
 
     return 0;
 }

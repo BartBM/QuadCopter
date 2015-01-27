@@ -28,9 +28,9 @@ string Vector3<T>::toString()
 {
     stringstream sstr;
     sstr << "Vector3 (";
-    sstr << dec << (double) x << ", ";
-    sstr << dec << (double) y << ", ";
-    sstr << dec << (double) z;
+    sstr << dec << x << ", ";
+    sstr << dec << y << ", ";
+    sstr << dec << z;
     sstr << ")";
     return sstr.str();
 }

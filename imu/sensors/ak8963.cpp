@@ -1,6 +1,9 @@
 #include "ak8963.h"
 #include <bitset>
 #include <unistd.h>
+#include <stdexcept>
+
+using namespace std;
 
 AK8963::AK8963() : I2CChip()
 {
@@ -57,25 +60,55 @@ void AK8963::readSensitivityAdjustmentValues()
     asa.setY(readValue<unsigned char>(ASAY));
     asa.setZ(readValue<unsigned char>(ASAZ));
 
-    cout << "asa: " << asa.toString() << endl;
+    cout << "\tASA: " << asa.toString() << endl;
 
+}
+
+void AK8963::selfTest()
+{
+    cout << "[AK8963 selfTest]" << endl;
+
+    setOutputBitSetting(OutputBitSetting::_14BIT);
+    setOperationModeSetting(OperationMode::POWER_DOWN);
+    setSelfTest(true);
+    setOperationModeSetting(OperationMode::SELF_TEST);
+
+    while (!readStatus1().isDataReady()) {
+        usleep(500);
+    }
+
+    Vector3<double> adjustedReading = readAdjustedMeasurementData();
+    setSelfTest(false);
+    setOperationModeSetting(OperationMode::POWER_DOWN);
+
+    if (adjustedReading.getX() >= -50 && adjustedReading.getX() <= 50
+            && adjustedReading.getY() >= -50 && adjustedReading.getY() <= 50
+            && adjustedReading.getZ() >= -800 && adjustedReading.getZ() <= -200) {
+        cout << "\tSelf test [PASSED]: " << adjustedReading.toString() << endl;
+    } else {
+         throw runtime_error("\tSelf test [FAILED]: " + adjustedReading.toString());
+    }
+}
+
+void AK8963::setSelfTest(bool enabled)
+{
+    if (enabled) {
+        write({ASTC, 0x40});
+    } else {
+        write({ASTC, 0x00});
+    }
+    //usleep(1000000);
 }
 
 Vector3<short> AK8963::readRawMeasurementData()
 {
     Vector3<short> measurementData;
 
-    //cout << bitset<8>(readValue<unsigned char>(HXH)) << bitset<8>(readValue<unsigned char>(HXL)) << endl;
     vector<unsigned char> values = readValues<unsigned char>(HXL, 6);
 
-    //cout << bitset<8>(values[1]) << bitset<8>(values[0]) << endl;
     measurementData.setX( ((short) values[1]) << 8 | values[0] );
     measurementData.setY( ((short) values[3]) << 8 | values[2] );
     measurementData.setZ( ((short) values[5]) << 8 | values[4] );
-
-    //measurementData.setX( ((readValue<unsigned char>(HXH) << 8) & 0xFF00) | (readValue<unsigned char>(HXL) & 0xFF) );
-    //measurementData.setY( ((readValue<unsigned char>(HYH) << 8) & 0xFF00) | (readValue<unsigned char>(HYL) & 0xFF) );
-    //measurementData.setZ( ((readValue<unsigned char>(HZH) << 8) & 0xFF00) | (readValue<unsigned char>(HZL) & 0xFF) );
 
     return measurementData;
 }

@@ -10,7 +10,7 @@
 
 #define MPU6500
 
-//#define AK89xx_SECONDARY
+#define AK89xx_SECONDARY
 #define AK8963_SECONDARY
 #define SUPPORTS_AK89xx_HIGH_SENS   (0x10)
 #define AK89xx_FSR                  (4915)
@@ -87,6 +87,7 @@ struct gyro_reg_s {
     unsigned char mem_start_addr;
     unsigned char prgm_start_h;
 #if defined AK89xx_SECONDARY
+    unsigned char raw_compass;
     unsigned char s0_addr;
     unsigned char s0_reg;
     unsigned char s0_ctrl;
@@ -97,7 +98,6 @@ struct gyro_reg_s {
     unsigned char s0_do;
     unsigned char s1_do;
     unsigned char i2c_delay_ctrl;
-    unsigned char raw_compass;
     /* The I2C_MST_VDDIO bit is in this register. */
     unsigned char yg_offs_tc;
 #endif
@@ -246,7 +246,7 @@ const struct hw_s hw = {
     321,
     0,
     256
-#if defined AK89xx_SECONDARY
+#ifdef AK89xx_SECONDARY
     ,AK89xx_FSR
 #endif
 };
@@ -315,6 +315,8 @@ public:
     int mpu_get_accel_fsr(unsigned char *fsr);
     int mpu_set_accel_fsr(unsigned char fsr);
 
+    int setup_compass(void);
+    int compass_self_test(void);
     int mpu_get_compass_fsr(unsigned short *fsr);
 
     int mpu_get_gyro_sens(float *sens);

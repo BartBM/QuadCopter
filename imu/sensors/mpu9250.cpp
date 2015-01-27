@@ -22,20 +22,26 @@ void MPU9250::init(I2CDataBus *i2cDataBus)
     ak8963.init(i2cDataBus);
 }
 
+void MPU9250::reset()
+{
+    write({PWR_MGMT_01,     0x80}); //reset
+    usleep(100000);
+}
+
 void MPU9250::configure()
 {
+    reset();
     write({PWR_MGMT_01,     0x00}); //disable sleep mode
     usleep(200000);
-    //write({PWR_MGMT_01,     0x80}); //reset
-    //usleep(100000);
+
     write({PWR_MGMT_01,     0x01}); //select accel x as time source
 
     write({CONFIG,          0x03});
     write({PWR_MGMT_02,     0x00});
 
-    write({SMPLRT_DIV,      0x04});
-    write({GYRO_CONFIG,     0b00011000});
-    write({ACCEL_CONFIG,    0b00011000});
+    setSamplerateDivider(5);
+    setGyroConfigScale(GyroScale::_1000dps);
+    setAccelConfigScale(AccelScale::_8g);
     write({ACCEL_CONFIG2,   0b00001011});
     usleep(100000);
 
@@ -47,14 +53,55 @@ void MPU9250::configure()
 
 void MPU9250::configureCompass()
 {
-    write({PWR_MGMT_01,     0x80}); //reset
+    write({PWR_MGMT_01, 0x01}); //disable sleep
+
+    setI2CBypass(true);
     usleep(100000);
 
-    write({PWR_MGMT_01,     0x01}); //disable sleep
-
-    cout << "go bypass" << endl;
-    setI2CBypass(true);
     ak8963.configure();
+}
+
+void MPU9250::enableFifo(bool gyro, bool accel, bool compass)
+{
+    cout << "[MPU9250 enableFifo]" << endl;
+    if (gyro || accel || compass) {
+        write({USER_CTRL, 0x40}); // enable FIFO
+    }
+    usleep(100000);
+
+    unsigned char enabledSensors = 0;
+
+    if (gyro) {
+        enabledSensors |= 0b01110000;
+    }
+
+    if (accel) {
+        enabledSensors |= 0b00001000;
+    }
+
+    if (compass) {
+        enabledSensors |= 0b00000001;
+
+        write({I2C_SLV0_ADDR, static_cast<unsigned char>(0x80 | ak8963.getSlaveAddr())});
+        write({I2C_SLV0_REG, ak8963.getStartReadAddr()});
+        write({I2C_SLV0_CTRL, 0x88});
+
+        write({I2C_SLV1_ADDR, ak8963.getSlaveAddr()});
+        write({I2C_SLV1_REG, 0x0A});
+        write({I2C_SLV1_CTRL, 0x81});
+        write({I2C_SLV1_DO, 0x01});
+
+        write({I2C_MST_DELAY_CTRL, 0x03});
+        write({I2C_SLV4_CTRL, 0x0F});
+
+    }
+
+    write({FIFO_EN, enabledSensors});
+}
+
+void MPU9250::pauseFifo()
+{
+    write({FIFO_EN, 0x00});
 }
 
 void MPU9250::calibrateSensors()
@@ -71,64 +118,52 @@ void MPU9250::readBiases()
     write({PWR_MGMT_01,     0x80});
     usleep(100000);
 
-    write({PWR_MGMT_01,     0x01});
+    //write({PWR_MGMT_01,     0x01});
     write({PWR_MGMT_02,     0x00});
     usleep(100000);
 
-    write({INT_ENABLE,      0x00});
-    write({FIFO_EN,         0x00});
-    write({PWR_MGMT_01,     0x00});
-    write({I2C_MST_CTRL,    0x00});
-    write({USER_CTRL,       0x00});
-    write({USER_CTRL,       0x0C}); // DMP_RST & FIFO_RST
+    //write({INT_ENABLE,      0x00});
+    //write({FIFO_EN,         0x00});
+    //write({PWR_MGMT_01,     0x00});
+    //write({I2C_MST_CTRL,    0x00});
+    //write({USER_CTRL,       0x00});
+    //write({USER_CTRL,       0x0C}); // DMP_RST & FIFO_RST
     usleep(15000);
 
-    write({CONFIG,          0x02});
-    write({SMPLRT_DIV,      0x00});
-    write({GYRO_CONFIG,     0x00});
-    write({ACCEL_CONFIG,    0x00});
+    write({CONFIG,          0x03});
+
+    setSamplerateDivider(1);
+    setGyroConfigScale(GyroScale::_1000dps);
+    setAccelConfigScale(AccelScale::_8g);
     usleep(200000);
 
-    //write({GYRO_CONFIG,     0b00011000});
-    //write({ACCEL_CONFIG,    0b00011000});
-    //write({ACCEL_CONFIG2,   0b00001011});
-
-    write({USER_CTRL,       0x40}); // enable FIFO
-    usleep(100000);
-
-    write({FIFO_EN,         0x70}); // enable gyro & accel (except for temp)
+    enableFifo(true, true, false);
     usleep(15000);
-    write({FIFO_EN,         0x00});
+    pauseFifo();
 
-    int fifo_counter = ((short) readValue<unsigned char>(FIFO_COUNTH)) << 8 | readValue<unsigned char>(FIFO_COUNTL);
-    int packet_counter = fifo_counter / 12;
+    int packet_counter = getFifoCount() / 12;
 
     cout << "\tNr of packets: " << dec << packet_counter << endl;
 
     for (int i=0; i<packet_counter; i++) {
-        vector<unsigned char> data = readValues<unsigned char>(FIFO_R_W, 6);
+        vector<unsigned char> data = readValues<unsigned char>(FIFO_R_W, 12);
 
-        vec3_accel_bias.setX((((short) data[0] << 8) | data[1]));
-        vec3_accel_bias.setY((((short) data[2] << 8) | data[3]));
-        vec3_accel_bias.setZ((((short) data[4] << 8) | data[5]));
+        vec3_accel_bias.setX(vec3_accel_bias.getX() + (short) (((short) data[0] << 8) | data[1]));
+        vec3_accel_bias.setY(vec3_accel_bias.getY() + (short) (((short) data[2] << 8) | data[3]));
+        vec3_accel_bias.setZ(vec3_accel_bias.getZ() + (short) (((short) data[4] << 8) | data[5]));
 
-        vec3_gyr_bias.setX(vec3_gyr_bias.getX() + (((short) data[6])  << 8 | data[7]));
-        vec3_gyr_bias.setY(vec3_gyr_bias.getY() + (((short) data[8])  << 8 | data[9]));
-        vec3_gyr_bias.setZ(vec3_gyr_bias.getZ() + (((short) data[10]) << 8 | data[11]));
+        vec3_gyr_bias.setX(vec3_gyr_bias.getX() + (short) (((short) data[6]  << 8) | data[7]));
+        vec3_gyr_bias.setY(vec3_gyr_bias.getY() + (short) (((short) data[8]  << 8) | data[9]));
+        vec3_gyr_bias.setZ(vec3_gyr_bias.getZ() + (short) (((short) data[10] << 8) | data[11]));
     }
 
-    vec3_accel_bias.setX((long) ((((long long) vec3_accel_bias.getX()) << 16) / ACCEL_SENSITIVITY / packet_counter));
-    vec3_accel_bias.setY((long) ((((long long) vec3_accel_bias.getY()) << 16) / ACCEL_SENSITIVITY / packet_counter));
-    vec3_accel_bias.setZ((long) ((((long long) vec3_accel_bias.getZ()) << 16) / ACCEL_SENSITIVITY / packet_counter));
-
-    vec3_gyr_bias.setX((long) ((((long long) vec3_gyr_bias.getX()) << 16) / GYRO_SENSITIVITY / packet_counter));
-    vec3_gyr_bias.setY((long) ((((long long) vec3_gyr_bias.getY()) << 16) / GYRO_SENSITIVITY / packet_counter));
-    vec3_gyr_bias.setZ((long) ((((long long) vec3_gyr_bias.getZ()) << 16) / GYRO_SENSITIVITY / packet_counter));
+    vec3_accel_bias /= packet_counter;
+    vec3_gyr_bias /= packet_counter;
 
     if (vec3_accel_bias.getZ() > 0L)
-            vec3_accel_bias.setZ(vec3_accel_bias.getZ() - 65536L);
-        else
-            vec3_accel_bias.setZ(vec3_accel_bias.getZ() + 65536L);
+        vec3_accel_bias.setZ(vec3_accel_bias.getZ() - getAccelSensitivity());
+    else
+        vec3_accel_bias.setZ(vec3_accel_bias.getZ() + getAccelSensitivity());
 
     cout << "\tAccel bias: " << vec3_accel_bias.toString() << endl;
     cout << "\tGyro bias: " << vec3_gyr_bias.toString() << endl;
@@ -138,34 +173,42 @@ void MPU9250::readBiases()
 void MPU9250::calibrateGyro()
 {
     cout << "[MPU9250 calibrateGyro]" << endl;
-    write({XG_OFFSET_H, static_cast<unsigned char>(((vec3_gyr_bias.getX() * -1) >> 8) & 0xFF) });
-    write({XG_OFFSET_L, static_cast<unsigned char>((vec3_gyr_bias.getX() * -1) & 0xFF) });
 
-    write({YG_OFFSET_H, static_cast<unsigned char>(((vec3_gyr_bias.getY() * -1) >> 8) & 0xFF) });
-    write({YG_OFFSET_L, static_cast<unsigned char>((vec3_gyr_bias.getY() * -1) & 0xFF) });
+    vec3_gyr_bias *= -1;
 
-    write({ZG_OFFSET_H, static_cast<unsigned char>(((vec3_gyr_bias.getZ() * -1) >> 8) & 0xFF) });
-    write({ZG_OFFSET_L, static_cast<unsigned char>((vec3_gyr_bias.getZ() * -1) & 0xFF) });
+    cout << vec3_gyr_bias.toString() << endl;
+
+    write({XG_OFFSET_H, static_cast<unsigned char>((vec3_gyr_bias.getX() >> 8) & 0xFF) });
+    write({XG_OFFSET_L, static_cast<unsigned char>(vec3_gyr_bias.getX()  & 0xFF) });
+
+    write({YG_OFFSET_H, static_cast<unsigned char>((vec3_gyr_bias.getY() >> 8) & 0xFF) });
+    write({YG_OFFSET_L, static_cast<unsigned char>(vec3_gyr_bias.getY() & 0xFF) });
+
+    write({ZG_OFFSET_H, static_cast<unsigned char>((vec3_gyr_bias.getZ() >> 8) & 0xFF) });
+    write({ZG_OFFSET_L, static_cast<unsigned char>(vec3_gyr_bias.getZ() & 0xFF) });
 }
 
 void MPU9250::calibrateAccel()
 {
     cout << "[MPU9250 calibrateAccel]" << endl;
+
     Vector3<long> vec3_accel_reg_bias;
     vec3_accel_reg_bias.setX(((long) readValue<unsigned char>(XA_OFFSET_H) << 8) | readValue<unsigned char>(XA_OFFSET_L));
     vec3_accel_reg_bias.setY(((long) readValue<unsigned char>(YA_OFFSET_H) << 8) | readValue<unsigned char>(YA_OFFSET_L));
     vec3_accel_reg_bias.setZ(((long) readValue<unsigned char>(ZA_OFFSET_H) << 8) | readValue<unsigned char>(ZA_OFFSET_L));
 
-    vec3_accel_reg_bias -= (vec3_accel_bias & ~1);
+    cout << vec3_accel_reg_bias.toString() << endl;
+    vec3_accel_reg_bias -= ((vec3_accel_bias) & ~1);
+    cout << vec3_accel_reg_bias.toString() << endl;
 
-    write({XA_OFFSET_H, static_cast<unsigned char>(((vec3_accel_reg_bias.getX() * -1) >> 8) & 0xFF) });
-    write({XA_OFFSET_L, static_cast<unsigned char>((vec3_accel_reg_bias.getX() * -1) & 0xFF) });
+    write({XA_OFFSET_H, static_cast<unsigned char>((vec3_accel_reg_bias.getX() >> 8) & 0xFF) });
+    write({XA_OFFSET_L, static_cast<unsigned char>(vec3_accel_reg_bias.getX() & 0xFF) });
 
-    write({YA_OFFSET_H, static_cast<unsigned char>(((vec3_accel_reg_bias.getY() * -1) >> 8) & 0xFF) });
-    write({YA_OFFSET_L, static_cast<unsigned char>((vec3_accel_reg_bias.getY() * -1) & 0xFF) });
+    write({YA_OFFSET_H, static_cast<unsigned char>((vec3_accel_reg_bias.getY() >> 8) & 0xFF) });
+    write({YA_OFFSET_L, static_cast<unsigned char>(vec3_accel_reg_bias.getY() & 0xFF) });
 
-    write({ZA_OFFSET_H, static_cast<unsigned char>(((vec3_accel_reg_bias.getZ() * -1) >> 8) & 0xFF) });
-    write({ZA_OFFSET_L, static_cast<unsigned char>((vec3_accel_reg_bias.getZ() * -1) & 0xFF) });
+    write({ZA_OFFSET_H, static_cast<unsigned char>((vec3_accel_reg_bias.getZ() >> 8) & 0xFF) });
+    write({ZA_OFFSET_L, static_cast<unsigned char>(vec3_accel_reg_bias.getZ() & 0xFF) });
 }
 
 void MPU9250::selfTest()
@@ -221,6 +264,49 @@ void MPU9250::selfTest()
     cout << "\tSelftest accel (factory): " << accelSelfTest.toString() << endl;
 }
 
+short MPU9250::getFifoCount()
+{
+    return ((short) readValue<unsigned char>(FIFO_COUNTH)) << 8 | readValue<unsigned char>(FIFO_COUNTL);
+}
+
+void MPU9250::readFifoStream()
+{
+    cout << "[MPU9250 readFifoStream]" << endl;
+
+    write({I2C_MST_CTRL,    0x00});
+
+    int packetCount;
+    Vector3<short> gyro, accel;
+
+    for (int i=0; i<100; i++) {
+        packetCount = getFifoCount() / 12;
+
+        while (packetCount < 2) {
+            usleep(500);
+            packetCount = getFifoCount() / 12;
+        }
+
+        vector<unsigned char> data = readValues<unsigned char>(FIFO_R_W, 12);
+
+        accel.setX((short) (((short) data[0] << 8) | data[1]));
+        accel.setY((short) (((short) data[2] << 8) | data[3]));
+        accel.setZ((short) (((short) data[4] << 8) | data[5]));
+
+        gyro.setX((short) (((short) data[6] << 8) | data[7]));
+        gyro.setY((short) (((short) data[8] << 8) | data[9]));
+        gyro.setZ((short) (((short) data[10] << 8) | data[11]));
+
+        cout << "packet count" << packetCount << "\t" << gyro.toString() << "\t" << accel.toString() << endl;
+    }
+}
+
+void MPU9250::setSamplerateDivider(int sampleRateDivider)
+{
+    this->sampleRateDivider = sampleRateDivider - 1;
+    write({SMPLRT_DIV, static_cast<unsigned char>(this->sampleRateDivider & 0xFF)});
+
+}
+
 Vector3<short> MPU9250::readGyro()
 {
     short x =  (((short) readValue<unsigned char>(GYRO_XOUT_H)) << 8) & 0xFF00;
@@ -247,6 +333,18 @@ Vector3<short> MPU9250::readAccel()
     z |= ((short) readValue<unsigned char>(ACCEL_ZOUT_L));
 
     return Vector3<short>(x, y, z);
+}
+
+Vector3<short> MPU9250::readCompass()
+{
+    vector<unsigned char> magData = readValues<unsigned char>(EXT_SENS_DATA_00, 8);
+
+    Vector3<short> mag;
+    mag.setX((short) (((short) magData[2] << 8) | magData[1]));
+    mag.setY((short) (((short) magData[4] << 8) | magData[3]));
+    mag.setZ((short) (((short) magData[6] << 8) | magData[5]));
+
+    cout << mag.toString() << endl;
 }
 
 void MPU9250::whoAmi()
@@ -300,4 +398,52 @@ void MPU9250::setI2CBypass(bool enabled)
 
     write({INT_PIN_CFG, 0x82});
     usleep(100000);
+}
+
+void MPU9250::setGyroConfigScale(GyroScale gyroScale)
+{
+    unsigned char gyro_conf = readValue<unsigned char>(GYRO_CONFIG);
+    gyro_conf |= (static_cast<unsigned char>(gyroScale) << 3);
+    write({GYRO_CONFIG, gyro_conf});
+    activeGyroScale = gyroScale;
+}
+
+void MPU9250::setAccelConfigScale(AccelScale accelScale)
+{
+    unsigned char accel_conf = readValue<unsigned char>(ACCEL_CONFIG);
+    accel_conf |= (static_cast<unsigned char>(accelScale) << 3);
+    write({ACCEL_CONFIG, accel_conf});
+    activeAccelScale = accelScale;
+}
+
+int MPU9250::getGyroSensitivity()
+{
+    switch (activeGyroScale) {
+        case GyroScale::_250dps:
+            return 131;//131.072
+        case GyroScale::_500dps:
+            return 66; //65.536
+        case GyroScale::_1000dps:
+            return 33; //32.768
+        case GyroScale::_2000dps:
+            return 16; //16.384
+        default:
+            return 33;
+    }
+}
+
+int MPU9250::getAccelSensitivity()
+{
+    switch (activeAccelScale) {
+        case AccelScale::_2g:
+            return 16384;
+        case AccelScale::_4g:
+            return 8192;
+        case AccelScale::_8g:
+            return 4096;
+        case AccelScale::_16g:
+            return 2048;
+        default:
+            return 4096;
+    }
 }

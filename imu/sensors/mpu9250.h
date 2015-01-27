@@ -34,26 +34,41 @@ public:
     unsigned char getWriteAddr() { return MPU9250_WRITE_ADDR; }
     AK8963& getCompass() { return ak8963; }
 
-
     void whoAmi();
+    void reset();
     void configure();
     void configureCompass();
     void calibrateSensors();
     void selfTest();
+    void enableFifo(bool gyro, bool accel, bool compass);
+    void pauseFifo();
+    void setSamplerateDivider(int sampleRateDivider);
+    void readFifoStream();
+    short getFifoCount();
     Vector3<short> readGyro();
     Vector3<short> readAccel();
+    Vector3<short> readCompass();
+    int getGyroSensitivity();
+    int getAccelSensitivity();
 
     void setGyroSelfTest(bool enabled);
     void setAccelSelfTest(bool enabled);
     void setI2CBypass(bool enabled);
+    void setGyroConfigScale(GyroScale gyroScale);
+    void setAccelConfigScale(AccelScale accelScale);
 
 private:
     void readBiases();
     void calibrateGyro();
     void calibrateAccel();
 
+    int sampleRateDivider;
+
     Vector3<int>  gyroSelfTest,  accelSelfTest;
-    Vector3<long> vec3_gyr_bias, vec3_accel_bias;
+    Vector3<int> vec3_gyr_bias, vec3_accel_bias;
+
+    GyroScale activeGyroScale;
+    AccelScale activeAccelScale;
 
     AK8963 ak8963;
 };

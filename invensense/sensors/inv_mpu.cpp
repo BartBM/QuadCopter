@@ -5,6 +5,9 @@
 #include <math.h>
 #include <unistd.h>
 #include "inv_mpu.h"
+#include <algorithm>
+
+#define AK89xx_SECONDARY
 
 InvMpu::InvMpu() {
     st.reg = &reg;
@@ -981,7 +984,7 @@ int InvMpu::mpu_set_sample_rate(unsigned short rate)
         st.chip_cfg.sample_rate = 1000 / (1 + data);
 
 #ifdef AK89xx_SECONDARY
-        mpu_set_compass_sample_rate(min(st.chip_cfg.compass_sample_rate, MAX_COMPASS_SAMPLE_RATE));
+        mpu_set_compass_sample_rate(std::min((int) st.chip_cfg.compass_sample_rate, MAX_COMPASS_SAMPLE_RATE));
 #endif
 
         /* Automatically set LPF to 1/2 sampling rate. */
@@ -1485,7 +1488,7 @@ int InvMpu::mpu_set_int_latched(unsigned char enable)
 
 
 #ifdef AK89xx_SECONDARY
-static int compass_self_test(void)
+int InvMpu::compass_self_test(void)
 {
     unsigned char tmp[6];
     unsigned char tries = 10;
@@ -2352,7 +2355,7 @@ int InvMpu::mpu_get_dmp_state(unsigned char *enabled)
 
 #ifdef AK89xx_SECONDARY
 /* This initialization is similar to the one in ak8975.c. */
-static int setup_compass(void)
+int InvMpu::setup_compass(void)
 {
     unsigned char data[4], akm_addr;
 
@@ -2368,7 +2371,7 @@ static int setup_compass(void)
 
     if (akm_addr > 0x0F) {
         /* TODO: Handle this case in all compass-related functions. */
-        log_e("Compass not found.\n");
+        cout << "Compass not found.\n";
         return -1;
     }
 
@@ -2500,8 +2503,6 @@ int InvMpu::mpu_get_compass_reg(short *data, unsigned long *timestamp)
     data[1] = ((long)data[1] * st.chip_cfg.mag_sens_adj[1]) >> 8;
     data[2] = ((long)data[2] * st.chip_cfg.mag_sens_adj[2]) >> 8;
 
-    if (timestamp)
-        get_ms(timestamp);
     return 0;
 #else
     return -1;

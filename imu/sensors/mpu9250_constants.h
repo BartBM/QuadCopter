@@ -29,6 +29,15 @@
 #define ZG_OFFSET_H         0x17
 #define ZG_OFFSET_L         0x18
 
+#define I2C_SLV0_ADDR       0x25
+#define I2C_SLV0_REG        0x26
+#define I2C_SLV0_CTRL       0x27
+
+#define I2C_SLV1_ADDR       0x28
+#define I2C_SLV1_REG        0x29
+#define I2C_SLV1_CTRL       0x2A
+
+#define I2C_SLV4_CTRL       0x34
 #define INT_PIN_CFG         0x37
 #define INT_ENABLE          0x38
 
@@ -47,11 +56,17 @@
 #define GYRO_ZOUT_H         0x47
 #define GYRO_ZOUT_L         0x48
 
-#define I2C_SLV4_CTRL       0x34
+#define EXT_SENS_DATA_00    0x49
+
+#define I2C_SLV0_DO         0x63
+#define I2C_SLV1_DO         0x64
+#define I2C_SLV2_DO         0x65
+#define I2C_SLV3_DO         0x66
 
 #define USER_CTRL           0x6A
 #define PWR_MGMT_01         0x6B
 #define PWR_MGMT_02         0x6C
+#define I2C_MST_DELAY_CTRL  0x67
 
 #define FIFO_COUNTH         0x72
 #define FIFO_COUNTL         0x73

@@ -54,7 +54,6 @@ void readDmpFifo(InvMpu& mpu, InvDmp& dmp) {
         //cout << "dmp accel: " << accel[0] << ", " << accel[1] << ", " << accel[2] << endl;
         //cout << "quaternion: " << quat[0] << ", " << quat[1] << ", " << quat[2] << ", " << quat[3] << endl;
 
-
             double w = (float) (quaternion[0]>>16) / 16384.0f;
             double x = (float) (quaternion[1]>>16) / 16384.0f;
             double y = (float) (quaternion[2]>>16) / 16384.0f;
@@ -98,14 +97,15 @@ int main(int argc, char *argv[])
 
     InvMpu mpu;
     mpu.init(&busPirate);
+    //mpu.setup_compass();
 
-    InvDmp dmp(&mpu);
-    dmp.init(&busPirate);
+    //InvDmp dmp(&mpu);
+    //dmp.init(&busPirate);
+
+    mpu.mpu_init(&params);
+    mpu.mpu_set_sensors(INV_XYZ_GYRO | INV_XYZ_ACCEL | INV_XYZ_COMPASS);
 
     /*
-    mpu.mpu_init(&params);
-    mpu.mpu_set_sensors(INV_XYZ_GYRO | INV_XYZ_ACCEL);
-
     long gyro[3] = {0, 0, 0};
     long gyro_factory_bias[3] = {0, 0, 0};
     long accel[3] = {0, 0, 0};
@@ -124,8 +124,9 @@ int main(int argc, char *argv[])
     cout << "mpu_run_6500_self_test gyro: " << gyro[0] << ", " << gyro[1] << ", " << gyro[2] << endl;
     */
 
-    init(mpu, dmp);
-    readDmpFifo(mpu, dmp);
+    //init(mpu, dmp);
+
+    //readDmpFifo(mpu, dmp);
 
     return 0;
 

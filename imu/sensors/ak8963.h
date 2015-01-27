@@ -98,15 +98,18 @@ public:
     void deviceId();
     void configure();
     void readSensitivityAdjustmentValues();
+    void selfTest();
+    void setSelfTest(bool enabled);
     Vector3<short> readRawMeasurementData();
     Vector3<double> adjustMeasurementData(Vector3<short> data);
     Vector3<double> readAdjustedMeasurementData();
     RegStatus1 readStatus1();
     RegStatus2 readStatus2();    
 
+    unsigned char getStartReadAddr() { return ST1; }
+    unsigned char getSlaveAddr() { return AK8963_ADDR; }
     unsigned char getReadAddr() { return AK8963_READ_ADDR; }
     unsigned char getWriteAddr() { return AK8963_WRITE_ADDR; }
-
 
 private:
     Vector3<unsigned char> asa;

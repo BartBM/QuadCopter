@@ -1,6 +1,7 @@
 #ifndef AK8963_CONSTANTS_H
 #define AK8963_CONSTANTS_H
 
+#define AK8963_ADDR         0x0C
 #define AK8963_WRITE_ADDR   0x18
 #define AK8963_READ_ADDR    0x19
 
