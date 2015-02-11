@@ -80,7 +80,7 @@ void MPU9250::enableFifo(bool gyro, bool accel, bool compass)
     }
 
     if (compass) {
-        enabledSensors |= 0b00000001;
+        enabledSensors |= 0b00000011;
 
         write({I2C_SLV0_ADDR, static_cast<unsigned char>(0x80 | ak8963.getSlaveAddr())});
         write({I2C_SLV0_REG, ak8963.getStartReadAddr()});
@@ -273,7 +273,7 @@ void MPU9250::readFifoStream()
 {
     cout << "[MPU9250 readFifoStream]" << endl;
 
-    write({I2C_MST_CTRL,    0x00});
+    write({I2C_MST_CTRL,    0x0D}); // set I2C master clock to 400 kHz
 
     int packetCount;
     Vector3<short> gyro, accel;
