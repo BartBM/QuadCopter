@@ -3,12 +3,16 @@
 #include <unistd.h>
 #include <iostream>
 #include <bitset>
+#include <chrono>
 
 using namespace std;
 
 MPU9250::MPU9250() : I2CChip()
 {
     cout << endl << "==> MPU 9250" << endl;
+    accelEnabled = false;
+    gyroEnabled = false;
+    magEnabled = false;
 }
 
 MPU9250::~MPU9250()
@@ -64,6 +68,11 @@ void MPU9250::configureCompass()
 void MPU9250::enableFifo(bool gyro, bool accel, bool compass)
 {
     cout << "[MPU9250 enableFifo]" << endl;
+
+    gyroEnabled = gyro;
+    accelEnabled = accel;
+    magEnabled = compass;
+
     if (gyro || accel || compass) {
         write({USER_CTRL, 0x40}); // enable FIFO
     }
@@ -71,15 +80,15 @@ void MPU9250::enableFifo(bool gyro, bool accel, bool compass)
 
     unsigned char enabledSensors = 0;
 
-    if (gyro) {
+    if (gyroEnabled) {
         enabledSensors |= 0b01110000;
     }
 
-    if (accel) {
+    if (accelEnabled) {
         enabledSensors |= 0b00001000;
     }
 
-    if (compass) {
+    if (magEnabled) {
         enabledSensors |= 0b00000011;
 
         write({I2C_SLV0_ADDR, static_cast<unsigned char>(0x80 | ak8963.getSlaveAddr())});
@@ -276,28 +285,49 @@ void MPU9250::readFifoStream()
     write({I2C_MST_CTRL,    0x0D}); // set I2C master clock to 400 kHz
 
     int packetCount;
-    Vector3<short> gyro, accel;
+    Vector3<short> gyro, accel, mag;
+    int package_size = 0 + ((gyroEnabled)? 6 : 0) + ((accelEnabled)? 6 : 0) + ((magEnabled)? 8 : 0);
+
+    chrono::time_point<chrono::system_clock> timeStart = chrono::system_clock::now();
 
     for (int i=0; i<100; i++) {
-        packetCount = getFifoCount() / 12;
+        packetCount = getFifoCount() / package_size;
 
         while (packetCount < 2) {
             usleep(500);
-            packetCount = getFifoCount() / 12;
+            packetCount = getFifoCount() / package_size;
+            cout << "wait - not enough packets: " << packetCount << endl;
         }
 
-        vector<unsigned char> data = readValues<unsigned char>(FIFO_R_W, 12);
+        vector<unsigned char> data = readValues<unsigned char>(FIFO_R_W, package_size);
+        int s = 0;
+        if (accelEnabled) {
+            accel.setX((short) (((short) data[0] << 8) | data[1]));
+            accel.setY((short) (((short) data[2] << 8) | data[3]));
+            accel.setZ((short) (((short) data[4] << 8) | data[5]));
+            s+=6;
+        }
 
-        accel.setX((short) (((short) data[0] << 8) | data[1]));
-        accel.setY((short) (((short) data[2] << 8) | data[3]));
-        accel.setZ((short) (((short) data[4] << 8) | data[5]));
+        if (gyroEnabled) {
+            gyro.setX((short) (((short) data[s + 0] << 8) | data[s + 1]));
+            gyro.setY((short) (((short) data[s + 2] << 8) | data[s + 3]));
+            gyro.setZ((short) (((short) data[s + 4] << 8) | data[s + 5]));
+            s+=6;
+        }
 
-        gyro.setX((short) (((short) data[6] << 8) | data[7]));
-        gyro.setY((short) (((short) data[8] << 8) | data[9]));
-        gyro.setZ((short) (((short) data[10] << 8) | data[11]));
+        if (magEnabled) {
+            s+=1;
+            mag.setX((short) (((short) data[s + 1] << 8) | data[s + 0]));
+            mag.setY((short) (((short) data[s + 3] << 8) | data[s + 2]));
+            mag.setZ((short) (((short) data[s + 5] << 8) | data[s + 4]));
+        }
 
-        cout << "packet count" << packetCount << "\t" << gyro.toString() << "\t" << accel.toString() << endl;
+        cout << "packet count" << packetCount << "\t" << gyro.toString() << "\t" << accel.toString() << "\t" << bitset<8>(data[12]) << " " << bitset<8>(data[19]) << " " << mag.toString() << endl;
+
     }
+
+    cout << "Duration: " << dec << chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - timeStart).count() << endl;
+
 }
 
 void MPU9250::setSamplerateDivider(int sampleRateDivider)
@@ -344,7 +374,7 @@ Vector3<short> MPU9250::readCompass()
     mag.setY((short) (((short) magData[4] << 8) | magData[3]));
     mag.setZ((short) (((short) magData[6] << 8) | magData[5]));
 
-    cout << mag.toString() << endl;
+    return mag;
 }
 
 void MPU9250::whoAmi()

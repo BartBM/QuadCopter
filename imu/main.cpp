@@ -10,7 +10,7 @@ using namespace std;
 
 void testCompass(AK8963& compass)
 {
-    compass.setOutputBitSetting(OutputBitSetting::_16BIT);
+    compass.setOutputBitSetting(OutputBitSetting::_14BIT);
     compass.setOperationModeSetting(OperationMode::CONT_MEASUREMENT1);
     for (int i=0; i<10; i++) {
 
@@ -66,17 +66,17 @@ int main(int argc, char *argv[])
 //    imu.selfTest();
 //    testGyro(imu);
 
-    imu.setSamplerateDivider(20);
-    imu.enableFifo(true, true, true);
-    imu.setI2CBypass(true);
-    imu.readCompass();
-    imu.readFifoStream();
-    imu.readCompass();
-
 //    imu.configureCompass();
-//    AK8963 compass = imu.getCompass();
+    AK8963 compass = imu.getCompass();
 //    compass.selfTest();
 //    testCompass(compass);
+
+    compass.setOutputBitSetting(OutputBitSetting::_14BIT);
+    compass.setOperationModeSetting(OperationMode::CONT_MEASUREMENT1);
+    imu.setSamplerateDivider(10);
+    imu.enableFifo(true, true, false);
+    imu.setI2CBypass(false);
+    imu.readFifoStream();
 
     return 0;
 }

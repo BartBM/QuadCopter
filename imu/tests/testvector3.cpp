@@ -1,13 +1,9 @@
-#ifndef TESTVECTOR3_H
-#define TESTVECTOR3_H
-
 #include <iostream>
 #include <limits>
 
 using namespace std;
 
-#define CATCH_CONFIG_MAIN
-#include "../catch.h"
+#include "catch.h"
 #include "../math/vector3.h"
 
 TEST_CASE( "Test magnetometer sensitivity adjustment", "[Vector3]") {
@@ -36,6 +32,4 @@ TEST_CASE( "Test magnetometer sensitivity adjustment", "[Vector3]") {
     REQUIRE(fabs(result.getY() - 2.5390625d) < numeric_limits<double>::epsilon());
     REQUIRE(fabs(result.getZ() - 6.140625d) < numeric_limits<double>::epsilon());
 }
-
-#endif // TESTVECTOR3_H
 

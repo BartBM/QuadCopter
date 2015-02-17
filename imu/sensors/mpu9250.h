@@ -62,6 +62,8 @@ private:
     void calibrateGyro();
     void calibrateAccel();
 
+    bool accelEnabled, gyroEnabled, magEnabled;
+
     int sampleRateDivider;
 
     Vector3<int>  gyroSelfTest,  accelSelfTest;
