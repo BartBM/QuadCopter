@@ -1,5 +1,11 @@
 #include "sensorfusion.h"
+#include <events/imuevent.h>
 #include <math.h>
+#include <iostream>
+
+using namespace std;
+
+#define PI 3.14159265
 
 SensorFusion::SensorFusion()
 {
@@ -22,7 +28,30 @@ SensorFusion::~SensorFusion()
 
 }
 
-void SensorFusion::MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz) {
+void SensorFusion::processEvent(Event* event)
+{
+    if (ImuEvent* imuEvent = dynamic_cast<ImuEvent*>(event)) {
+        madgwickAHRSupdateIMU(imuEvent->getGyroscopeReading().getX() * PI / 180.0f, imuEvent->getGyroscopeReading().getY() * PI / 180.0f, imuEvent->getGyroscopeReading().getZ() * PI / 180.0f,
+                               imuEvent->getAccelerometerReading().getX(), imuEvent->getAccelerometerReading().getY(), imuEvent->getAccelerometerReading().getZ());
+
+        logCurrentReading();
+    }
+}
+
+void SensorFusion::logCurrentReading() {
+    float yaw, pitch, roll;
+    yaw   = atan2(2.0f * (q1 * q2 + q0 * q3), q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3);
+    pitch = -asin(2.0f * (q1 * q3 - q0 * q2));
+    roll  = atan2(2.0f * (q0 * q1 + q2 * q3), q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3);
+    pitch *= 180.0f / PI;
+    yaw   *= 180.0f / PI;
+    //yaw   -= 13.8f; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds on 2014-04-04
+    roll  *= 180.0f / PI;
+
+    printf("Yaw, Pitch, Roll: %f %f %f\n\r", yaw, pitch, roll);
+}
+
+void SensorFusion::madgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz) {
     float recipNorm;
     float s0, s1, s2, s3;
     float qDot1, qDot2, qDot3, qDot4;
@@ -31,7 +60,7 @@ void SensorFusion::MadgwickAHRSupdate(float gx, float gy, float gz, float ax, fl
 
     // Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
     if((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f)) {
-        MadgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
+        madgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
         return;
     }
 
@@ -121,7 +150,7 @@ void SensorFusion::MadgwickAHRSupdate(float gx, float gy, float gz, float ax, fl
 //---------------------------------------------------------------------------------------------------
 // IMU algorithm update
 
-void SensorFusion::MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az) {
+void SensorFusion::madgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az) {
     float recipNorm;
     float s0, s1, s2, s3;
     float qDot1, qDot2, qDot3, qDot4;
@@ -189,7 +218,7 @@ void SensorFusion::MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax,
     q3 *= recipNorm;
 }
 
-void SensorFusion::MahonyAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz) {
+void SensorFusion::mahonyAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz) {
     float recipNorm;
     float q0q0, q0q1, q0q2, q0q3, q1q1, q1q2, q1q3, q2q2, q2q3, q3q3;
     float hx, hy, bx, bz;
@@ -199,7 +228,7 @@ void SensorFusion::MahonyAHRSupdate(float gx, float gy, float gz, float ax, floa
 
     // Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
     if((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f)) {
-        MahonyAHRSupdateIMU(gx, gy, gz, ax, ay, az);
+        mahonyAHRSupdateIMU(gx, gy, gz, ax, ay, az);
         return;
     }
 
@@ -293,7 +322,7 @@ void SensorFusion::MahonyAHRSupdate(float gx, float gy, float gz, float ax, floa
 //---------------------------------------------------------------------------------------------------
 // IMU algorithm update
 
-void SensorFusion::MahonyAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az) {
+void SensorFusion::mahonyAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az) {
     float recipNorm;
     float halfvx, halfvy, halfvz;
     float halfex, halfey, halfez;
@@ -364,6 +393,15 @@ void SensorFusion::MahonyAHRSupdateIMU(float gx, float gy, float gz, float ax, f
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
 
 float SensorFusion::invSqrt(float x) {
+    /**
+     * http://diydrones.com/forum/topics/madgwick-imu-ahrs-and-fast-inverse-square-root
+     * Remarkably more stable and accurate pitch/roll angles (blue/magenta) were achieved by exchanging the inverse square root implementation.
+     * I used  the following code from Accurate and Fast InvSqrt for computing the inverse square root of float x:
+     **/
+    //unsigned int i = 0x5F1F1412 - (*(unsigned int*)&x >> 1);
+    //float tmp = *(float*)&i;
+    //float y = tmp * (1.69000231f - 0.714158168f * x * tmp * tmp);
+
     float halfx = 0.5f * x;
     float y = x;
     long i = *(long*)&y;

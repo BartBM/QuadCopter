@@ -105,6 +105,8 @@ public:
     Vector3<double> readAdjustedMeasurementData();
     RegStatus1 readStatus1();
     RegStatus2 readStatus2();    
+    unsigned char getOutputBitSetting();
+    double getOutputDataResolution();
 
     unsigned char getStartReadAddr() { return ST1; }
     unsigned char getSlaveAddr() { return AK8963_ADDR; }

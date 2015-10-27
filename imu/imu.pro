@@ -26,7 +26,8 @@ SOURCES += main.cpp \
     events/eventdispatcher.cpp \
     events/eventobserver.cpp \
     events/threadedeventobserver.cpp \
-    events/imuevent.cpp
+    events/imuevent.cpp \
+    events/eventlogger.cpp
 
 HEADERS += \
     buspirate.h \
@@ -44,4 +45,5 @@ HEADERS += \
     events/eventobserver.h \
     events/threadedeventobserver.h \
     events/event.h \
-    events/imuevent.h
+    events/imuevent.h \
+    events/eventlogger.h

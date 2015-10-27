@@ -9,7 +9,7 @@ TEMPLATE = app
 QT       += core
 QT       -= gui
 
-TARGET = imu
+TARGET = imu_test
 
 CONFIG += c++11
 

@@ -1,4 +1,5 @@
 #include "eventdispatcher.h"
+#include "threadedeventobserver.h"
 #include <algorithm>
 
 EventDispatcher::EventDispatcher()
@@ -8,10 +9,10 @@ EventDispatcher::EventDispatcher()
 
 EventDispatcher::~EventDispatcher()
 {
-
+    cout << "EventDispatcher destructor" << endl;
 }
 
-void EventDispatcher::notify(Event& event)
+void EventDispatcher::notify(Event* event)
 {
     for_each(eventObservers.begin(), eventObservers.end(), [&event](EventObserver* eventObserver) { eventObserver->onEvent(event); });
 }

@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>MeasurementsForm.qml</file>
+        <file>MinMaxOutput.qml</file>
+    </qresource>
+</RCC>

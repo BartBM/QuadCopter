@@ -9,7 +9,7 @@ public:
     EventObserver();
     ~EventObserver();
 
-    virtual void onEvent(Event& event) = 0;
+    virtual void onEvent(Event* event) = 0;
 
 };
 

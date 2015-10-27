@@ -11,6 +11,7 @@ class Event
 {
 public:
     virtual EventType getEventType() = 0;
+    virtual Event* clone() = 0;
 };
 
 #endif // EVENT_H

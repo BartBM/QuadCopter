@@ -106,8 +106,8 @@ Vector3<short> AK8963::readRawMeasurementData()
 
     vector<unsigned char> values = readValues<unsigned char>(HXL, 6);
 
-    measurementData.setX( ((short) values[1]) << 8 | values[0] );
-    measurementData.setY( ((short) values[3]) << 8 | values[2] );
+    measurementData.setY( (((short) values[1]) << 8 | values[0]) * -1 );
+    measurementData.setX( ((short) values[3]) << 8 | values[2] );
     measurementData.setZ( ((short) values[5]) << 8 | values[4] );
 
     return measurementData;
@@ -116,13 +116,24 @@ Vector3<short> AK8963::readRawMeasurementData()
 Vector3<double> AK8963::adjustMeasurementData(Vector3<short> data)
 {
     Vector3<double> correctedData = (Vector3<double>) readRawMeasurementData();
-    correctedData = ((Vector3<double>) data) * (((((Vector3<double>) asa - 128) * 0.5f) / 128) + 1);
+    correctedData = (((Vector3<double>) data) * (((((Vector3<double>) asa - 128.0) * 0.5f) / 128.0) + 1)) * getOutputDataResolution();
     return correctedData;
 }
 
 Vector3<double> AK8963::readAdjustedMeasurementData()
 {
     return adjustMeasurementData(readRawMeasurementData());
+}
+
+double AK8963::getOutputDataResolution() {
+    switch (outputBitSetting) {
+        case OutputBitSetting::_14BIT:
+            return 0.6d;
+        case OutputBitSetting::_16BIT:
+            return 0.15d;
+        default:
+            return 0.6d;
+    }
 }
 
 RegStatus2 AK8963::readStatus2()
@@ -137,5 +148,10 @@ RegStatus1 AK8963::readStatus1()
     RegStatus1 regStatus1;
     regStatus1.parse(readValue<unsigned char>({ST1}));
     return regStatus1;
+}
+
+unsigned char AK8963::getOutputBitSetting()
+{
+    return static_cast<typename std::underlying_type<OutputBitSetting>::type>(outputBitSetting);
 }
 

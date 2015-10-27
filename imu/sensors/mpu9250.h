@@ -3,6 +3,7 @@
 
 #include "../communication/i2c/i2cdatabus.h"
 #include "../communication/i2c/i2cchip.h"
+#include "../events/eventdispatcher.h"
 #include "../math/vector3.h"
 #include "mpu9250_constants.h"
 #include "ak8963.h"
@@ -23,7 +24,7 @@ enum class AccelScale : unsigned char {
     _16g = 0b11
 };
 
-class MPU9250 : public I2CChip
+class MPU9250 : public I2CChip, public EventDispatcher
 {
 public:
     MPU9250();
@@ -44,6 +45,7 @@ public:
     void pauseFifo();
     void setSamplerateDivider(int sampleRateDivider);
     void readFifoStream();
+    void convertAndDispatch(Vector3<short>& gyro, Vector3<short>& accel, Vector3<short>& mag);
     short getFifoCount();
     Vector3<short> readGyro();
     Vector3<short> readAccel();

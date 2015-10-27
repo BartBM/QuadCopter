@@ -2,6 +2,7 @@
 #define SENSORFUSION_H
 
 #include "vector3.h"
+#include "../events/threadedeventobserver.h"
 
 enum class FusionAlgorithm: unsigned char {
     Madgwick,
@@ -14,20 +15,23 @@ enum class FusionAlgorithm: unsigned char {
 #define twoKiDef	(2.0f * 0.0f)	// 2 * integral gain
 
 
-class SensorFusion
+class SensorFusion : public ThreadedEventObserver
 {
 public:
     SensorFusion();
     ~SensorFusion();
 
 protected:
-    void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
-    void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az);
+    void madgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
+    void madgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az);
 
-    void MahonyAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
-    void MahonyAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az);
+    void mahonyAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
+    void mahonyAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az);
 
     float invSqrt(float x);
+
+    void logCurrentReading();
+    void processEvent(Event* event);
 
 private:
     volatile float q0, q1, q2, q3;	// quaternion of sensor frame relative to auxiliary frame

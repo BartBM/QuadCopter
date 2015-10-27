@@ -16,15 +16,16 @@ public:
     ThreadedEventObserver();
     ~ThreadedEventObserver();
 
-    void onEvent(Event& event);
+    void onEvent(Event *event);
     void consumeEvents();
-    virtual void processEvent(Event& event) = 0;
+    void stopWorker() { threadingEnabled = false; }
+    virtual void processEvent(Event* event) = 0;
     thread* getThread() { return worker; }
 
 private:
-    bool threadingEnabled, eventAdded;
+    bool threadingEnabled;
     mutex mutexLock;
-    deque<Event> events;
+    deque<Event*> events;
     condition_variable conditionVar;
     thread* worker;
 

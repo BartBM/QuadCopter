@@ -14,7 +14,7 @@ public:
     EventDispatcher();
     ~EventDispatcher();
 
-    void notify(Event &event);
+    void notify(Event* event);
     void registerObserver(EventObserver* eventObserver);
     void unregisterObserver(EventObserver* eventObserver);
 

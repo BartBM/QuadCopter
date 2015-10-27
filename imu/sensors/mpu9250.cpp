@@ -4,6 +4,7 @@
 #include <iostream>
 #include <bitset>
 #include <chrono>
+#include "../events/imuevent.h"
 
 using namespace std;
 
@@ -98,10 +99,11 @@ void MPU9250::enableFifo(bool gyro, bool accel, bool compass)
         write({I2C_SLV1_ADDR, ak8963.getSlaveAddr()});
         write({I2C_SLV1_REG, 0x0A});
         write({I2C_SLV1_CTRL, 0x81});
-        write({I2C_SLV1_DO, 0x01});
+        write({I2C_SLV1_DO, 0x01 | ak8963.getOutputBitSetting()});
 
-        write({I2C_MST_DELAY_CTRL, 0x03});
-        write({I2C_SLV4_CTRL, 0x0F});
+        write({I2C_SLV4_CTRL, 0x04});
+        write({I2C_MST_DELAY_CTRL, 0x03});        
+
 
     }
 
@@ -119,6 +121,7 @@ void MPU9250::calibrateSensors()
     readBiases();
     calibrateGyro();
     calibrateAccel();
+    //readBiases(); // TODO remove
 }
 
 void MPU9250::readBiases()
@@ -141,38 +144,47 @@ void MPU9250::readBiases()
 
     write({CONFIG,          0x03});
 
-    setSamplerateDivider(1);
+    setSamplerateDivider(10);
     setGyroConfigScale(GyroScale::_1000dps);
     setAccelConfigScale(AccelScale::_8g);
     usleep(200000);
 
-    enableFifo(true, true, false);
-    usleep(15000);
-    pauseFifo();
+    int total_packets = 0;
 
-    int packet_counter = getFifoCount() / 12;
+    while (total_packets < 150) {
+        enableFifo(true, true, false);
+        usleep(200000);
+        pauseFifo();
 
-    cout << "\tNr of packets: " << dec << packet_counter << endl;
+        int packet_counter = getFifoCount() / 12;
+        cout << "\tNr of packets: " << dec << packet_counter << endl;
 
-    for (int i=0; i<packet_counter; i++) {
-        vector<unsigned char> data = readValues<unsigned char>(FIFO_R_W, 12);
+        for (int i=0; i<packet_counter; i++) {
 
-        vec3_accel_bias.setX(vec3_accel_bias.getX() + (short) (((short) data[0] << 8) | data[1]));
-        vec3_accel_bias.setY(vec3_accel_bias.getY() + (short) (((short) data[2] << 8) | data[3]));
-        vec3_accel_bias.setZ(vec3_accel_bias.getZ() + (short) (((short) data[4] << 8) | data[5]));
+            vector<unsigned char> data = readValues<unsigned char>(FIFO_R_W, 12);
 
-        vec3_gyr_bias.setX(vec3_gyr_bias.getX() + (short) (((short) data[6]  << 8) | data[7]));
-        vec3_gyr_bias.setY(vec3_gyr_bias.getY() + (short) (((short) data[8]  << 8) | data[9]));
-        vec3_gyr_bias.setZ(vec3_gyr_bias.getZ() + (short) (((short) data[10] << 8) | data[11]));
+            vec3_accel_bias.setX(vec3_accel_bias.getX() + (short) (((short) data[0] << 8) | data[1]));
+            vec3_accel_bias.setY(vec3_accel_bias.getY() + (short) (((short) data[2] << 8) | data[3]));
+            vec3_accel_bias.setZ(vec3_accel_bias.getZ() + (short) (((short) data[4] << 8) | data[5]));
+            //cout << (vec3_accel_bias / (total_packets + i +1)).toString() << endl;
+
+            vec3_gyr_bias.setX(vec3_gyr_bias.getX() + (short) (((short) data[6]  << 8) | data[7]));
+            vec3_gyr_bias.setY(vec3_gyr_bias.getY() + (short) (((short) data[8]  << 8) | data[9]));
+            vec3_gyr_bias.setZ(vec3_gyr_bias.getZ() + (short) (((short) data[10] << 8) | data[11]));
+        }
+
+        total_packets += packet_counter;
     }
 
-    vec3_accel_bias /= packet_counter;
-    vec3_gyr_bias /= packet_counter;
+    vec3_accel_bias /= total_packets;
+    vec3_gyr_bias /= total_packets;
 
     if (vec3_accel_bias.getZ() > 0L)
         vec3_accel_bias.setZ(vec3_accel_bias.getZ() - getAccelSensitivity());
     else
         vec3_accel_bias.setZ(vec3_accel_bias.getZ() + getAccelSensitivity());
+
+    vec3_accel_bias /= 2;
 
     cout << "\tAccel bias: " << vec3_accel_bias.toString() << endl;
     cout << "\tGyro bias: " << vec3_gyr_bias.toString() << endl;
@@ -290,7 +302,7 @@ void MPU9250::readFifoStream()
 
     chrono::time_point<chrono::system_clock> timeStart = chrono::system_clock::now();
 
-    for (int i=0; i<100; i++) {
+    for (int i=0; i<10000; i++) {
         packetCount = getFifoCount() / package_size;
 
         while (packetCount < 2) {
@@ -322,12 +334,22 @@ void MPU9250::readFifoStream()
             mag.setZ((short) (((short) data[s + 5] << 8) | data[s + 4]));
         }
 
-        cout << "packet count" << packetCount << "\t" << gyro.toString() << "\t" << accel.toString() << "\t" << bitset<8>(data[12]) << " " << bitset<8>(data[19]) << " " << mag.toString() << endl;
+        //cout << "packet count" << packetCount << "\t" << gyro.toString() << "\t" << accel.toString() << "\t" << bitset<8>(data[12]) << " " << bitset<8>(data[19]) << " " << mag.toString() << endl;
+
+        convertAndDispatch(gyro, accel, mag);
 
     }
 
     cout << "Duration: " << dec << chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - timeStart).count() << endl;
 
+}
+
+void MPU9250::convertAndDispatch(Vector3<short>& gyro, Vector3<short>& accel, Vector3<short>& mag)
+{
+    ImuEvent imuEvent;
+    imuEvent.setData(((Vector3<float>) gyro) / getGyroSensitivity(), ((Vector3<float>) accel) / getAccelSensitivity(), mag);
+
+    notify(&imuEvent);
 }
 
 void MPU9250::setSamplerateDivider(int sampleRateDivider)
