@@ -9,7 +9,7 @@
 class MinMaxCalibration : public QObject
 {
     Q_OBJECT
-
+    Q_PROPERTY(MinMaxAxisValues *minMaxAxisValues READ getMinMaxAxisValues NOTIFY minMaxAxisValuesChanged)
 public:
     explicit MinMaxCalibration();
     MinMaxCalibration(ChartDataUpdater *chartDataUpdater);

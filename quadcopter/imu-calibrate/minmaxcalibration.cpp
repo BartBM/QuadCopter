@@ -36,6 +36,7 @@ void MinMaxCalibration::processReading(Vector3<float> axisReading)
     }
 
     chartDataUpdater->processMinMaxAxisValues(this->minMaxAxisValues);
+    //emit minMaxAxisValuesChanged();
 }
 
 MinMaxAxisValues *MinMaxCalibration::getMinMaxAxisValues()

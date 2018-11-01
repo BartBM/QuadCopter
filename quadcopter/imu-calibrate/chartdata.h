@@ -9,6 +9,7 @@
 class ChartData : public QObject
 {
     Q_OBJECT
+
 public:
     explicit ChartData(QObject *parent = nullptr);
     void appendXPoint( float x, float y );

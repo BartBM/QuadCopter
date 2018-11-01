@@ -29,18 +29,18 @@ int main(int argc, char *argv[])
 {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication app(argc, argv);
+    QQmlApplicationEngine engine;
 
     ChartDataUpdater *chartDataUpdater = new ChartDataUpdater();
-
+    ChartData *chartData = chartDataUpdater->getChartData();
     MinMaxCalibration *minMaxCalibration = new MinMaxCalibration(chartDataUpdater);
-    //qmlRegisterUncreatableType<MinMaxAxisValues>("Module", 1, 0, "MinMaxAxisValues", nullptr);
-    //qmlRegisterUncreatableType<MinMaxCalibration>("Module", 1, 0, "MinMaxCalibration", nullptr);
+
+    qmlRegisterUncreatableType<MinMaxAxisValues>("Module", 1, 0, "MinMaxAxisValues", nullptr);
+    qmlRegisterUncreatableType<MinMaxCalibration>("Module", 1, 0, "MinMaxCalibration", nullptr);
     qmlRegisterUncreatableType<ChartData>("Module", 1, 0, "ChartData", nullptr);
 
-    QQmlApplicationEngine engine;
-    //engine.rootContext()->setContextProperty("calibration", minMaxCalibration);
-    //engine.rootContext()->setContextProperty("dataseries", minMaxDataSeries);
-    engine.rootContext()->setContextProperty("chartData", chartDataUpdater->getChartData());
+    engine.rootContext()->setContextProperty("calibration", minMaxCalibration);
+    engine.rootContext()->setContextProperty("chartData", chartData);
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
     if (engine.rootObjects().isEmpty())
         return -1;

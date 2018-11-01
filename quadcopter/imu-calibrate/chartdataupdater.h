@@ -12,7 +12,7 @@ QT_CHARTS_USE_NAMESPACE
 class ChartDataUpdater : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(ChartData* chartData READ getChartData NOTIFY chartDataChanged)
+    Q_PROPERTY(ChartData *chartData READ getChartData NOTIFY chartDataChanged)
 public:
     explicit ChartDataUpdater(QObject *parent = nullptr);
 

@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.2
 
 Window {
+
     id: window
     visible: true
     width: 640
@@ -16,12 +17,6 @@ Window {
     }
 
     Connections {
-        target: chartData
-        onChartDataChanged: {
-            console.log("data received");
-        }
-
-        /*
         target: calibration
         onMinMaxAxisValuesChanged: {
 //            console.log("The application data changed!" +
@@ -44,7 +39,6 @@ Window {
                 zAxisValues.maxValue = round(calibration.getMinMaxAxisValues().getMaxZ(), 2)
             }
         }
-        */
     }
 
     GridLayout {

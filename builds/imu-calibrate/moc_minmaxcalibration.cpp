@@ -21,8 +21,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_MinMaxCalibration_t {
-    QByteArrayData data[5];
-    char stringdata0[81];
+    QByteArrayData data[6];
+    char stringdata0[98];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -35,11 +35,13 @@ QT_MOC_LITERAL(0, 0, 17), // "MinMaxCalibration"
 QT_MOC_LITERAL(1, 18, 23), // "minMaxAxisValuesChanged"
 QT_MOC_LITERAL(2, 42, 0), // ""
 QT_MOC_LITERAL(3, 43, 19), // "getMinMaxAxisValues"
-QT_MOC_LITERAL(4, 63, 17) // "MinMaxAxisValues*"
+QT_MOC_LITERAL(4, 63, 17), // "MinMaxAxisValues*"
+QT_MOC_LITERAL(5, 81, 16) // "minMaxAxisValues"
 
     },
     "MinMaxCalibration\0minMaxAxisValuesChanged\0"
-    "\0getMinMaxAxisValues\0MinMaxAxisValues*"
+    "\0getMinMaxAxisValues\0MinMaxAxisValues*\0"
+    "minMaxAxisValues"
 };
 #undef QT_MOC_LITERAL
 
@@ -50,7 +52,7 @@ static const uint qt_meta_data_MinMaxCalibration[] = {
        0,       // classname
        0,    0, // classinfo
        2,   14, // methods
-       0,    0, // properties
+       1,   26, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
@@ -67,6 +69,12 @@ static const uint qt_meta_data_MinMaxCalibration[] = {
 
  // slots: parameters
     0x80000000 | 4,
+
+ // properties: name, type, flags
+       5, 0x80000000 | 4, 0x00495009,
+
+ // properties: notify_signal_id
+       0,
 
        0        // eod
 };
@@ -91,7 +99,27 @@ void MinMaxCalibration::qt_static_metacall(QObject *_o, QMetaObject::Call _c, in
                 return;
             }
         }
+    } else if (_c == QMetaObject::RegisterPropertyMetaType) {
+        switch (_id) {
+        default: *reinterpret_cast<int*>(_a[0]) = -1; break;
+        case 0:
+            *reinterpret_cast<int*>(_a[0]) = qRegisterMetaType< MinMaxAxisValues* >(); break;
+        }
     }
+
+#ifndef QT_NO_PROPERTIES
+    else if (_c == QMetaObject::ReadProperty) {
+        MinMaxCalibration *_t = static_cast<MinMaxCalibration *>(_o);
+        Q_UNUSED(_t)
+        void *_v = _a[0];
+        switch (_id) {
+        case 0: *reinterpret_cast< MinMaxAxisValues**>(_v) = _t->getMinMaxAxisValues(); break;
+        default: break;
+        }
+    } else if (_c == QMetaObject::WriteProperty) {
+    } else if (_c == QMetaObject::ResetProperty) {
+    }
+#endif // QT_NO_PROPERTIES
 }
 
 QT_INIT_METAOBJECT const QMetaObject MinMaxCalibration::staticMetaObject = {
@@ -127,6 +155,23 @@ int MinMaxCalibration::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
             *reinterpret_cast<int*>(_a[0]) = -1;
         _id -= 2;
     }
+#ifndef QT_NO_PROPERTIES
+   else if (_c == QMetaObject::ReadProperty || _c == QMetaObject::WriteProperty
+            || _c == QMetaObject::ResetProperty || _c == QMetaObject::RegisterPropertyMetaType) {
+        qt_static_metacall(this, _c, _id, _a);
+        _id -= 1;
+    } else if (_c == QMetaObject::QueryPropertyDesignable) {
+        _id -= 1;
+    } else if (_c == QMetaObject::QueryPropertyScriptable) {
+        _id -= 1;
+    } else if (_c == QMetaObject::QueryPropertyStored) {
+        _id -= 1;
+    } else if (_c == QMetaObject::QueryPropertyEditable) {
+        _id -= 1;
+    } else if (_c == QMetaObject::QueryPropertyUser) {
+        _id -= 1;
+    }
+#endif // QT_NO_PROPERTIES
     return _id;
 }
 

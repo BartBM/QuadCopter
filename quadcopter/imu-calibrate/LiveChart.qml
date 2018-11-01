@@ -9,6 +9,12 @@ ChartView {
     property int counter : 0
 
     Connections {
+
+        target: chartData
+        onChartDataChanged: {
+            console.log("data received");
+        }
+
         /*
         target: calibration
         onMinMaxAxisValuesChanged: {
