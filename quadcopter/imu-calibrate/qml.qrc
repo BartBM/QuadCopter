@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>MinMaxCalibrationAxis.qml</file>
+        <file>LiveChart.qml</file>
+    </qresource>
+</RCC>
